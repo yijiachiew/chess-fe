@@ -1,7 +1,13 @@
+//TODO: Implement scenario where the king is in check
+//TODO: Implement scenario where the game is a draw
+//TODO: Implement Castling
+//Implement Turn shifts
+//TODO: Implement button to reset the board
 import React from "react";
 import { useState } from "react";
 import { ChessPiece, RenderChessPiece, getAvailableMoves, checkValidMove, PieceType, Player ,isCheckmate,canCastle} from "./chesspiece";
 import Button from "./button";
+import { bestMove } from "./ChessAi";
 // Renders the entire chessboard
 const RenderChessBoard = () => {
     //initial state for the chess pieces
@@ -125,16 +131,83 @@ const RenderChessBoard = () => {
         //Reset the available moves
         setAvailableMoves([]);
     }
+    //HandleDrop event but for the AI
+    const handleDropAi = (e:React.DragEvent,x:number,y:number) => {
+        e.preventDefault();
+        const pieceId = e.dataTransfer.getData("PieceId");
+        
+        //find the piece that is being moved
+        const piece = pieces.find((p) => p.id === pieceId);
+        if (!piece) {
+            console.log("Piece not found");
+            return;
+        }
+        piece.haveMoved = true;
+        
+        //Check if the move is valid
+        //Check if the move is in the available moves
+        if (!availableMoves.some((m) => m.x === x && m.y === y)) {
+            console.log("Invalid Move");
+            return;
+        }
+        // Save the previous state of the board
+        setPreviousState([...pieces]);
+        const targetPiece = pieces.find((p) => p.x === x && p.y === y);
+        // Updates the piece's position
+        setPieces((pieces) =>
+            pieces
+            .filter((p) => p.id !== targetPiece?.id)
+            .map((p) => {
+            if (p.id === pieceId) {
+                return { ...p, x, y };
+            }
+            return p;
+            })
+        );
+        //Check if the move is a castling move
+        if (piece.type === 'king' && Math.abs(piece.x - x) === 2) {
+            //Find the rook
+            const rook = pieces.find((p) => p.type === 'rook' && p.player === piece.player && ((p.x === 0 && x === 2)||( p.x === 7 && x === 6)));
+            console.log(rook);
+            if (rook) {
+                //Move the rook
+                const newRookX = x === 2 ? 3 : 5;
+                setPieces((pieces) => pieces.map((p) => {
+                    if (p.id === rook.id) {
+                        return {...p, x: newRookX};
+                    }
+                    return p;
+                }));
+            }
+        }
+        setTimeout(() => {
+            makeAiMove();
+        },300);
+        //Change the player turn
+        //setPlayerTurn(playerTurn === 'white' ? 'black' : 'white');
+        setPreviousPlayerTurn(playerTurn);
+        //Check if the game is over
+        //Reset the available moves
+        setAvailableMoves([]);
+    }
     // Pieces cannot be dragged over the board
     const handleDragOver = (e:React.DragEvent) => {
         e.preventDefault();
     }
-    //TODO: Implement scenario where the king is in check
-    
-    //TODO: Implement scenario where the game is a draw
-    //TODO: Implement Castling
-    //Implement Turn shifts
-    //TODO: Implement button to reset the board
+    //Automated move madde by the AI
+    const makeAiMove = () => {
+        console.log(playerTurn);
+        const move = bestMove(pieces,3,"black");
+        if (move) {
+            setPieces((pieces) => pieces.map((p) => {
+                if (p.id === move.piece.id) {
+                    return {...p,x:move.x,y:move.y};
+                }
+                return p;
+            }));
+    }
+    //setPlayerTurn(playerTurn === 'white' ? 'black' : 'white');
+    }
     const handleReset = () => {
         setPieces([...initialPieces]);
     }
@@ -180,7 +253,7 @@ const RenderChessBoard = () => {
                                     backgroundColor: isBlack ? "black" : "white",
                                 }}
                                 /**Handles the drop event here */
-                                onDrop={(e) => handleDrop(e, j, i)}
+                                onDrop={(e) => handleDropAi(e, j, i)}
                                 onDragOver={handleDragOver}
                             >
                                 {isAvailableMove && <div 

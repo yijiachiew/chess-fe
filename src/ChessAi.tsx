@@ -6,21 +6,21 @@ interface ChessMove {
     y: number;
     piece:ChessPiece;
 }
-function bestMove (pieces : ChessPiece[],player:Player):ChessMove{
+function bestMove (pieces : ChessPiece[],depth:number,player:Player):ChessMove|null{
     let bestMove : ChessMove | null = null;
-    let bestScore = -Infinity;
+    let bestScore = Infinity;
     for (const piece of pieces.filter(p => p.player === player)) {
         const moves = getAvailableMoves(piece,pieces);
         for (const move of moves) {
             const simulatedPieces = simulateMove(piece,move.x,move.y,pieces);
-            const score = miniMax(simulatedPieces,2,-Infinity,Infinity,false);
-            if (score > bestScore){
+            const score = miniMax(simulatedPieces,depth-1,-Infinity,Infinity,true);
+            if (score < bestScore){
                 bestScore = score;
                 bestMove = {x:move.x,y:move.y,piece};
             }
         }
     }
-    return {x:0,y:0,piece:pieces[0]};
+    return bestMove;
 }
 
 
@@ -61,12 +61,12 @@ function miniMax (pieces:ChessPiece[],depth:number, alpha:number, beta:number,is
     }
 }
 function isGameOver(pieces:ChessPiece[]):boolean{
-    return !pieces.some(p => p.type === 'king');
+    return !pieces.some(p => p.type === 'king' && p.player === 'white') || !pieces.some(p => p.type === 'king' && p.player === 'black');
 }
 function simulateMove(piece:ChessPiece,x:number,y:number,pieces:ChessPiece[]):ChessPiece[]{
     return pieces.map(p => 
-        p.id === piece.id ? {...p,x,y} : (p.x === x && p.y === y ? null : p)
-    ).filter(Boolean) as ChessPiece[];
+        p.id === piece.id ? {...p,x,y} : p
+    ).filter((p) => !(p.x === x && p.y === y && p.player !== piece.player));
 
 }
 function evaluateBoard(pieces:ChessPiece[]):number{
@@ -81,7 +81,8 @@ function evaluateBoard(pieces:ChessPiece[]):number{
     }
     let score = 0;
     for (const piece of pieces) {
-        score += piece.player === 'white' ? pieceValues[piece.type] : -pieceValues[piece.type];
+        score += piece.player === 'black' ? pieceValues[piece.type] : -pieceValues[piece.type];
     }
     return score;
 }
+export { bestMove }
