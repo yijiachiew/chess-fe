@@ -29,7 +29,7 @@ const RenderChessBoard = () => {
         //White pieces
         ...Array.from({length: 8}, (_,i) => ({id:`pawnw${i}`,x:i,y:6,type:'pawn' as PieceType,player:'white' as Player})),
         {id:"rookw1",x:0,y:7,type:'rook',player:'white'},
-        {id:"rookw1",x:7,y:7,type:'rook',player:'white'},
+        {id:"rookw2",x:7,y:7,type:'rook',player:'white'},
         {id:"knightw1",x:1,y:7,type:'knight',player:'white'},
         {id:"knightw2",x:6,y:7,type:'knight',player:'white'},
         {id:"bishopw1",x:2,y:7,type:'bishop',player:'white'},
@@ -153,17 +153,15 @@ const RenderChessBoard = () => {
         // Save the previous state of the board
         setPreviousState([...pieces]);
         const targetPiece = pieces.find((p) => p.x === x && p.y === y);
-        // Updates the piece's position
-        setPieces((pieces) =>
-            pieces
-            .filter((p) => p.id !== targetPiece?.id)
-            .map((p) => {
+        // Create a new set of pieces with updated positions
+        const newPieces = pieces.filter((p) => p.id !== targetPiece?.id).map((p) => {
             if (p.id === pieceId) {
                 return { ...p, x, y };
             }
             return p;
-            })
-        );
+        });
+        // Updates the piece's position
+        setPieces(newPieces);
         //Check if the move is a castling move
         if (piece.type === 'king' && Math.abs(piece.x - x) === 2) {
             //Find the rook
@@ -181,7 +179,7 @@ const RenderChessBoard = () => {
             }
         }
         setTimeout(() => {
-            makeAiMove();
+            makeAiMove(newPieces);
         },300);
         //Change the player turn
         //setPlayerTurn(playerTurn === 'white' ? 'black' : 'white');
@@ -195,16 +193,21 @@ const RenderChessBoard = () => {
         e.preventDefault();
     }
     //Automated move madde by the AI
-    const makeAiMove = () => {
-        console.log(playerTurn);
-        const move = bestMove(pieces,3,"black");
+    const makeAiMove = (newPieces:ChessPiece[]) => {
+       // console.log(playerTurn);
+        const move = bestMove(newPieces,3,"black");
         if (move) {
-            setPieces((pieces) => pieces.map((p) => {
+            //console.log(move);
+            const targetPiece = newPieces.find((p) => p.x === move.x && p.y === move.y);
+            setPieces((pieces) => pieces.filter((p) => p.id !== targetPiece?.id)
+            .map((p) => {
                 if (p.id === move.piece.id) {
                     return {...p,x:move.x,y:move.y};
                 }
                 return p;
             }));
+            console.log(targetPiece);
+            //setPlayerTurn(playerTurn === 'white' ? 'black' : 'white');
     }
     //setPlayerTurn(playerTurn === 'white' ? 'black' : 'white');
     }
@@ -253,7 +256,8 @@ const RenderChessBoard = () => {
                                     backgroundColor: isBlack ? "black" : "white",
                                 }}
                                 /**Handles the drop event here */
-                                onDrop={(e) => handleDropAi(e, j, i)}
+                                onDrop={(e) => handleDropAi(e, j, i)
+                                }
                                 onDragOver={handleDragOver}
                             >
                                 {isAvailableMove && <div 

@@ -1,16 +1,18 @@
 //TODO Make a chess AI that can play against the player 
 //Algorithm: Minimax
 import { ChessPiece, Player,getAvailableMoves } from "./chesspiece";
+//ChessMove interface to store the move that the AI will make
 interface ChessMove {
     x: number;
     y: number;
-    piece:ChessPiece;
+    piece:ChessPiece;//The piece that is moving
 }
 function bestMove (pieces : ChessPiece[],depth:number,player:Player):ChessMove|null{
     let bestMove : ChessMove | null = null;
     let bestScore = Infinity;
     for (const piece of pieces.filter(p => p.player === player)) {
         const moves = getAvailableMoves(piece,pieces);
+        //moves ? console.log(moves) : console.log("No moves");
         for (const move of moves) {
             const simulatedPieces = simulateMove(piece,move.x,move.y,pieces);
             const score = miniMax(simulatedPieces,depth-1,-Infinity,Infinity,true);
@@ -20,6 +22,7 @@ function bestMove (pieces : ChessPiece[],depth:number,player:Player):ChessMove|n
             }
         }
     }
+    console.log(bestMove);
     return bestMove;
 }
 
@@ -29,6 +32,7 @@ function miniMax (pieces:ChessPiece[],depth:number, alpha:number, beta:number,is
         return evaluateBoard(pieces);
     }
     if (isMax){
+        //Maximizing player
         let maxEval = -Infinity;
         for (const piece of pieces.filter(p => p.player === 'white')) {
             const moves = getAvailableMoves(piece,pieces);
@@ -44,6 +48,7 @@ function miniMax (pieces:ChessPiece[],depth:number, alpha:number, beta:number,is
         }
         return maxEval;
     } else {
+        //Minimizing player
         let minEval = Infinity;
         for (const piece of pieces.filter(p => p.player === 'black')) {
             const moves = getAvailableMoves(piece,pieces);
@@ -64,9 +69,10 @@ function isGameOver(pieces:ChessPiece[]):boolean{
     return !pieces.some(p => p.type === 'king' && p.player === 'white') || !pieces.some(p => p.type === 'king' && p.player === 'black');
 }
 function simulateMove(piece:ChessPiece,x:number,y:number,pieces:ChessPiece[]):ChessPiece[]{
+    const targetPiece = pieces.find((p) => p.x === x && p.y === y);
     return pieces.map(p => 
         p.id === piece.id ? {...p,x,y} : p
-    ).filter((p) => !(p.x === x && p.y === y && p.player !== piece.player));
+    ).filter((p) => p.id !== targetPiece?.id);
 
 }
 function evaluateBoard(pieces:ChessPiece[]):number{
@@ -81,8 +87,9 @@ function evaluateBoard(pieces:ChessPiece[]):number{
     }
     let score = 0;
     for (const piece of pieces) {
-        score += piece.player === 'black' ? pieceValues[piece.type] : -pieceValues[piece.type];
+        score += piece.player === 'white' ? pieceValues[piece.type] : -pieceValues[piece.type];
     }
+    //console.log(score);
     return score;
 }
 export { bestMove }

@@ -39,27 +39,19 @@ const checkIsWhite = (player: string) => {
 
 // Check valid move for pawns
 //TODO: Implement for black pawns
-const isPawnValidMoves = (x:number,y:number,piece:ChessPiece,pieces:ChessPiece[]) => {
-    if (piece.player === 'white') {
-        // White pawns move forward (incorrect implementation)
-        return (x === piece.x && (y === piece.y - 1 || (y === piece.y - 2 && piece.y === 6))) && 
-        //Check there is no piece in between
-        !pieces.some((p) => {
-            return  (p.x === x && p.y === piece.y - 1);
-        })
-        // White pawns can capture diagonally
-        ||
-        (Math.abs(x - piece.x) === 1 && y === piece.y - 1) && isCaptureMove(x,y,piece,pieces); 
-    }
-    // Black pawns move backwards (incorrect implementation)
-    return (x === piece.x && (y === piece.y + 1 || (y === piece.y + 2 && piece.y === 1))) &&   
-    //Check there is no piece in between
-    !pieces.some((p) => {
-        return  (p.x === x && p.y === piece.y + 1);
-    })
-    // Black pawns can capture diagonally
+const isPawnValidMoves = (x:number,y:number,piece:ChessPiece,pieces:ChessPiece[]):boolean => {
+    //Move backwards or forward 
+    const operator = piece.player === 'white' ? -1 : 1;
+    //Check if the pawn is at the starting position
+    const isStart = piece.player === 'white' ? piece.y === 6 : piece.y === 1;
+    return (x === piece.x && (y === piece.y + operator && !pieces.some((p) => p.x === x && p.y === y)))
+    || 
+    (x === piece.x && (y === piece.y + 2 * operator && !pieces.some((p) => p.x === x && p.y === y) && !pieces.some((p) => p.x === x && p.y === piece.y + operator)
+
+)) && isStart
+    //Check for capture moves
     ||
-    (Math.abs(x - piece.x) === 1 && y === piece.y + 1) && isCaptureMove(x,y,piece,pieces);
+    (Math.abs(x - piece.x) === 1 && y === piece.y + operator) && isCaptureMove(x,y,piece,pieces);
 }
 
 const isRookValidMoves = (x:number,y:number,piece:ChessPiece,pieces:ChessPiece[]) => {
@@ -99,13 +91,13 @@ const isKingValidMoves = (x:number,y:number,piece:ChessPiece,pieces:ChessPiece[]
     return Math.abs(x - piece.x) <= 1 && Math.abs(y - piece.y) <= 1;
 }
 // Check for valid capture moves
-const isCaptureMove = (x:number,y:number,piece:ChessPiece,pieces:ChessPiece[]) => {
+const isCaptureMove = (x:number,y:number,piece:ChessPiece,pieces:ChessPiece[]) :boolean => {
     const targetPiece = pieces.find((p) => p.x === x && p.y === y);
-    return targetPiece && targetPiece.player !== piece.player;
+    return targetPiece !== undefined && targetPiece.player !== piece.player;
 }
 // Check valid moves for all pieces
 function checkValidMove (x:number,y:number,piece:ChessPiece,pieces:ChessPiece[]) {
-    //Check move is blocked
+    //Check move is blocked by another piece of the same player
     const targetPiece = pieces.find((p) => p.x === x && p.y === y);
     if (targetPiece && targetPiece.player === piece.player) {
         return false;
@@ -124,7 +116,7 @@ function checkValidMove (x:number,y:number,piece:ChessPiece,pieces:ChessPiece[])
         case 'king':
             return isKingValidMoves(x,y,piece,pieces);
         default:
-            return true;
+            return false;
     }
 }
 //Returns available moves for a piece on the board
@@ -148,7 +140,7 @@ function getAvailableMoves(piece:ChessPiece,pieces:ChessPiece[]) {
                 availableMoves.push({x:newKingX,y:rook.y});
             }
             else {
-                console.log("Cannot castle");
+                //console.log("Cannot castle");
             }
         });
         //Filter out moves that put the king in check
@@ -158,9 +150,10 @@ function getAvailableMoves(piece:ChessPiece,pieces:ChessPiece[]) {
             return !isKingInCheck({...piece,x:move.x,y:move.y},simulatedPieces);
             
         })
-        console.log("Available moves",availableMoves);
+        //console.log("Available moves",availableMoves);
 
     }
+    ///console.log("Available moves",availableMoves);
     return availableMoves;
 }
 // Renders a single chess piece
@@ -226,7 +219,7 @@ function isCheckmate(player:Player,pieces:ChessPiece[]):boolean {
     if (!isKingInCheck(king,pieces)) {
         return false;
     }
-    console.log("King is in check");
+    //console.log("King is in check");
     //Check if the king can move to a safe square
     return !pieces.some((piece) => piece.player === player && getAvailableMoves(piece,pieces).some((move) => !isKingInCheck({...king,x:move.x,y:move.y},pieces)));
 }
@@ -234,7 +227,7 @@ function canCastle (king:ChessPiece,rook:ChessPiece,pieces:ChessPiece[]):boolean
     if (king.type !== 'king' || rook.type !== 'rook') {
         return false;
     }
-    console.log("Checking castle");
+    //console.log("Checking castle");
     if (king.haveMoved || rook.haveMoved) {
         return false;
     }
