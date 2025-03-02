@@ -8,6 +8,20 @@ import { useState } from "react";
 import { ChessPiece, RenderChessPiece, getAvailableMoves, checkValidMove, PieceType, Player ,isCheckmate,canCastle} from "./chesspiece";
 import Button from "./button";
 import { bestMove } from "./ChessAi";
+import axios from "axios";
+// API to send to backend
+const API_URL = "http://127.0.0.1:8000";
+
+type MoveList = [number,number][];
+
+interface GameState {
+    pieces:ChessPiece[];
+    playerTurn:Player;
+    isCheckmate:boolean;
+    isStalemate:boolean;
+    isCheck:boolean;
+}
+
 // Renders the entire chessboard
 const RenderChessBoard = () => {
     //initial state for the chess pieces
@@ -56,6 +70,8 @@ const RenderChessBoard = () => {
     const [playerTurn,setPlayerTurn] = useState<Player>('white');
     //Previous player turn
     const [previousPlayerTurn,setPreviousPlayerTurn] = useState<Player>('black');
+
+
     // Handles the drag event when a piece is picked up
     //TODO: Implement possible moves shown on the board
     const handleDragStart = (e:React.DragEvent,id:string) => {
@@ -67,12 +83,11 @@ const RenderChessBoard = () => {
             return;
         }
         e.dataTransfer.setData("PieceId", id);
-        
-        
         setAvailableMoves(getAvailableMoves(piece,pieces));
+
         
     }
-    
+
     // Handles the drop event after a piece is placed on the board
     //TODO: Implement the logic for blocked moves
     //TODO: Implement the logic for capturing pieces
@@ -213,14 +228,15 @@ const RenderChessBoard = () => {
     }
     const handleReset = () => {
         setPieces([...initialPieces]);
+        
     }
+    
     //TODO: Implement button to revert the last move
     const handleUndo = () => {
         setPieces([...previousState]);
         //If the player has already moved, revert the turn
         setPlayerTurn(previousPlayerTurn);
     }
-    //
     
     
     return (

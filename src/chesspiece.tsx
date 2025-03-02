@@ -31,6 +31,7 @@ interface ChessPieceProps {
     player: Player;
     onDragStart: (e: React.DragEvent, id: string) => void;
 }
+// The following code is typescript to handle chess logic without a seperate backend
 //TODO: Implement for black pieces
 // Checks if the player is white or black
 const checkIsWhite = (player: string) => {
@@ -238,5 +239,6 @@ function canCastle (king:ChessPiece,rook:ChessPiece,pieces:ChessPiece[]):boolean
     return true;
 
 }
+
 export {checkValidMove,getAvailableMoves,RenderChessPiece,isCheckmate,canCastle};
 export type {ChessPiece, ChessPieceProps, PieceType, Player};
