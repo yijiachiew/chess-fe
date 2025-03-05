@@ -8,19 +8,8 @@ import { useState } from "react";
 import { ChessPiece, RenderChessPiece, getAvailableMoves, checkValidMove, PieceType, Player ,isCheckmate,canCastle} from "./chesspiece";
 import Button from "./button";
 import { bestMove } from "./ChessAi";
-import axios from "axios";
 // API to send to backend
 const API_URL = "http://127.0.0.1:8000";
-
-type MoveList = [number,number][];
-
-interface GameState {
-    pieces:ChessPiece[];
-    playerTurn:Player;
-    isCheckmate:boolean;
-    isStalemate:boolean;
-    isCheck:boolean;
-}
 
 // Renders the entire chessboard
 const RenderChessBoard = () => {

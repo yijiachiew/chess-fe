@@ -1,9 +1,8 @@
 // New script for the chessboard but uses backend server for game logic
 import React from "react";
 import { useState } from "react";
-import { ChessPiece, RenderChessPiece, getAvailableMoves, checkValidMove, PieceType, Player ,isCheckmate,canCastle} from "./chesspiece";
+import { ChessPiece, RenderChessPiece, PieceType, Player} from "./chesspiece";
 import Button from "./button";
-import { bestMove } from "./ChessAi";
 import axios from "axios";
 // API to send to backend
 const API_URL = "http://127.0.0.1:8000";
@@ -89,6 +88,7 @@ const RenderChessBoardNew = () => {
             
         }
     }
+    //Post the move to the backend
     async function postStates(move:string){
         try {
             const res = await axios.post(`${API_URL}/move/${move}`,{
@@ -132,6 +132,15 @@ const RenderChessBoardNew = () => {
             console.log("Error");
         }
     }
+    async function undoMove() {
+        try {
+            const res = await axios.post(`${API_URL}/undo`);
+            console.log(res.data);
+        }
+        catch (err) {
+            console.log("Error");
+        }
+    }
     // Convert the index position of the square to the chess notation in UCI
     function indexToSquare(xIndex:number,yIndex:number):string {
         const file = String.fromCharCode(97 + xIndex);
@@ -139,7 +148,7 @@ const RenderChessBoardNew = () => {
         console.log(file + rank);
         return file + rank;
     }
-
+    // Convert the square notation to the index position
     function squareToIndex(square:string):{x:number,y:number} {
         const file = square.charCodeAt(0) - 97;
         const rank = 8 - parseInt(square[1]);
@@ -155,17 +164,21 @@ const RenderChessBoardNew = () => {
             }
             const sourceSquare = indexToSquare(piece.x,piece.y);
             const targetSquare = indexToSquare(x,y);
+            //Send the move to the backend
             postStates(`${sourceSquare}${targetSquare}`);
-            //fetchStates();
+            //Log the current state of the board
+            fetchStates();
         }
     // Pieces cannot be dragged over the board
     const handleDragOver = (e:React.DragEvent) => {
         e.preventDefault();
     }
+    // Reset the board to the initial state
     const handleReset = () => {
         setPieces([...initialPieces]);
         resetBoard();
     }
+    //Undo the last move
     const handleUndo = () => {
     }
     return (
