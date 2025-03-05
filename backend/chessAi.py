@@ -27,7 +27,8 @@ def get_board() -> dict:
         "check": board.is_check(),
         "is_stalemate": board.is_stalemate(),
         "is_game_over": board.is_game_over(),
-        "result": board.result() if board.is_game_over() else None
+        "result": board.result() if board.is_game_over() else None,
+        "pieces": get_pieces()
     }
 
 @app.post("/move/{move}") 
@@ -65,3 +66,15 @@ def get_legal_moves(square:str) -> list[tuple]:
 
 def update_board(uci_move:str):
     board.push_uci(uci_move)
+# Return a list of pieces on the board containing the position of each piece and each type
+def get_pieces():
+    return [
+        {
+            "square": chess.square_name(square),
+            "rank": chess.square_rank(square),
+            "file": chess.square_file(square),
+            "type": piece.symbol(),
+            "colour" : piece.color
+        }
+        for square, piece in board.piece_map().items()
+    ]

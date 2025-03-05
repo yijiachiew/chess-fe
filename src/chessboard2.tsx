@@ -113,7 +113,18 @@ const RenderChessBoardNew = () => {
                 headers: { "Content-Type": "application/json" },
             });
             const newState:GameState = res.data;
-            setPieces(newState.pieces);
+            console.log(newState);
+            // Convert from the python dict to a list of ChessPieces
+            const newPieces: ChessPiece[] = Object.entries(newState.pieces).map(([key, value]) => {
+                const {x, y} = squareToIndex(key);
+                return {
+                    x:x,
+                    y:y,
+                    id:value.id,
+                    type:value.type,
+                    player:value.player,
+                }
+            });
             setPlayerTurn(newState.playerTurn);
             console.log(newState.playerTurn);
             
