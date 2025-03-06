@@ -17,27 +17,27 @@ interface GameState {
 }
 const RenderChessBoardNew = () => {
     const initialPieces:ChessPiece[] = [
-            // Id not used for this implementation
+            // Id should be in the rank + file format
             //White pieces
-            ...Array.from({length: 8}, (_,i) => ({id:`pawnw${i}`,x:i,y:6,type:'pawn' as PieceType,player:'white' as Player})),
-            {id:"rookw1",x:0,y:7,type:'rook',player:'white'},
-            {id:"rookw2",x:7,y:7,type:'rook',player:'white'},
-            {id:"knightw1",x:1,y:7,type:'knight',player:'white'},
-            {id:"knightw2",x:6,y:7,type:'knight',player:'white'},
-            {id:"bishopw1",x:2,y:7,type:'bishop',player:'white'},
-            {id:"bishopw2",x:5,y:7,type:'bishop',player:'white'},
-            {id:"queenw",x:3,y:7,type:'queen',player:'white'},
-            {id:"kingw",x:4,y:7,type:'king',player:'white'},
+            ...Array.from({length: 8}, (_,i) => ({id:`${String.fromCharCode(97+i)}2`,x:i,y:6,type:'pawn' as PieceType,player:'white' as Player})),
+            {id:"a1",x:0,y:7,type:'rook',player:'white'},
+            {id:"h1",x:7,y:7,type:'rook',player:'white'},
+            {id:"b1",x:1,y:7,type:'knight',player:'white'},
+            {id:"g2",x:6,y:7,type:'knight',player:'white'},
+            {id:"c1",x:2,y:7,type:'bishop',player:'white'},
+            {id:"f1",x:5,y:7,type:'bishop',player:'white'},
+            {id:"d1",x:3,y:7,type:'queen',player:'white'},
+            {id:"e1",x:4,y:7,type:'king',player:'white'},
             //Black pieces
-            ...Array.from({length: 8}, (_,i) => ({id:`pawnb${i}`,x:i,y:1,type:'pawn' as PieceType,player:'black' as Player})),
-            {id:"rookb1",x:0,y:0,type:'rook',player:'black'},
-            {id:"rookb2",x:7,y:0,type:'rook',player:'black'},
-            {id:"knightb1",x:1,y:0,type:'knight',player:'black'},
-            {id:"knightb2",x:6,y:0,type:'knight',player:'black'},
-            {id:"bishopb1",x:2,y:0,type:'bishop',player:'black'},
-            {id:"bishopb2",x:5,y:0,type:'bishop',player:'black'},
-            {id:"queenb",x:3,y:0,type:'queen',player:'black'},
-            {id:"kingb",x:4,y:0,type:'king',player:'black'},
+            ...Array.from({length: 8}, (_,i) => ({id:`${String.fromCharCode(97+i)}7`,x:i,y:1,type:'pawn' as PieceType,player:'black' as Player})),
+            {id:"a8",x:0,y:0,type:'rook',player:'black'},
+            {id:"h8",x:7,y:0,type:'rook',player:'black'},
+            {id:"b8",x:1,y:0,type:'knight',player:'black'},
+            {id:"g8",x:6,y:0,type:'knight',player:'black'},
+            {id:"c8",x:2,y:0,type:'bishop',player:'black'},
+            {id:"f8",x:5,y:0,type:'bishop',player:'black'},
+            {id:"d8",x:3,y:0,type:'queen',player:'black'},
+            {id:"e8",x:4,y:0,type:'king',player:'black'},
         ]
         const [pieces,setPieces] = useState<ChessPiece[]>([...initialPieces])
         const [availableMoves,setAvailableMoves] = useState<{x:number,y:number}[]>([]);
@@ -96,9 +96,8 @@ const RenderChessBoardNew = () => {
                 headers: { "Content-Type": "application/json" },
                 
         });
-        console.log(res.data);
-        
-        
+        const newState:GameState = res.data;
+        updateGameState(newState);
 
         } catch (err) {
         console.log("Error");
@@ -115,16 +114,14 @@ const RenderChessBoardNew = () => {
             const newState:GameState = res.data;
             console.log(newState);
             // Convert from the python dict to a list of ChessPieces
-            const newPieces: ChessPiece[] = Object.entries(newState.pieces).map(([key, value]) => {
-                const {x, y} = squareToIndex(key);
-                return {
-                    x:x,
-                    y:y,
-                    id:value.id,
-                    type:value.type,
-                    player:value.player,
-                }
+            
+            const newPieces:ChessPiece[] = newState.pieces.map((p:ChessPiece) => {
+                return {id:p.id,x:p.x,y:p.y,type:p.type,player:p.player};
             });
+            
+            setPieces(newPieces);
+           
+            
             setPlayerTurn(newState.playerTurn);
             console.log(newState.playerTurn);
             
@@ -137,7 +134,7 @@ const RenderChessBoardNew = () => {
     async function resetBoard() {
         try {
             const res = await axios.post(`${API_URL}/reset`);
-            console.log(res.data);
+            console.log("reset");
         }
         catch (err) {
             console.log("Error");
@@ -145,18 +142,36 @@ const RenderChessBoardNew = () => {
     }
     async function undoMove() {
         try {
-            const res = await axios.post(`${API_URL}/undo`);
-            console.log(res.data);
+            const res = await axios.post(`${API_URL}/undo`,{
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+            });
+
+            const newState:GameState = res.data;
+            updateGameState(newState);
+            
         }
         catch (err) {
             console.log("Error");
         }
     }
+    function updateGameState(newState:GameState) {
+        console.log(newState);
+        // Convert from the python dict to a list of ChessPieces
+        
+        const newPieces:ChessPiece[] = newState.pieces.map((p:ChessPiece) => {
+            return {id:p.id,x:p.x,y:p.y,type:p.type,player:p.player};
+        });
+        
+        setPieces(newPieces);
+        setPlayerTurn(newState.playerTurn);
+        console.log(newState.playerTurn);
+    }
     // Convert the index position of the square to the chess notation in UCI
     function indexToSquare(xIndex:number,yIndex:number):string {
         const file = String.fromCharCode(97 + xIndex);
         const rank = (8 - yIndex).toString();
-        console.log(file + rank);
+        //console.log(file + rank);
         return file + rank;
     }
     // Convert the square notation to the index position
@@ -178,7 +193,8 @@ const RenderChessBoardNew = () => {
             //Send the move to the backend
             postStates(`${sourceSquare}${targetSquare}`);
             //Log the current state of the board
-            fetchStates();
+            //fetchStates();
+            setAvailableMoves([]);
         }
     // Pieces cannot be dragged over the board
     const handleDragOver = (e:React.DragEvent) => {
@@ -187,10 +203,13 @@ const RenderChessBoardNew = () => {
     // Reset the board to the initial state
     const handleReset = () => {
         setPieces([...initialPieces]);
+        setPlayerTurn('white');
         resetBoard();
     }
     //Undo the last move
     const handleUndo = () => {
+        console.log("Undo");
+        undoMove();
     }
     return (
     <div>

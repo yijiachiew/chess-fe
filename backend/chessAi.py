@@ -19,23 +19,38 @@ board = chess.Board() # create a game state instance
 # return a state of the board
 @app.get("/board")
 def get_board() -> dict:
+    get_board_status()
+
+
+def get_board_status() -> dict:
     return {
         "board": board.fen(),
-        "turn": "white" if board.turn == chess.WHITE else "black",
-        "checkmate": board.is_checkmate(),
-        "stalemate": board.is_stalemate(),
-        "check": board.is_check(),
-        "is_stalemate": board.is_stalemate(),
-        "is_game_over": board.is_game_over(),
+        "playerTurn": "white" if board.turn == chess.WHITE else "black",
+        "isCheckmate": board.is_checkmate(),
+        "isStalemate": board.is_stalemate(),
+        "isCheck": board.is_check(),
+        "isGameOver": board.is_game_over(),
         "result": board.result() if board.is_game_over() else None,
         "pieces": get_pieces()
     }
-
 @app.post("/move/{move}") 
 def make_move(move: str):
-    move = chess.Move.from_uci(move)
-    board.push(move)
-
+    # check if not a legal move
+    if not check_valid_move(move):
+        return {"error": "Invalid move"}
+    else:
+        move = chess.Move.from_uci(move)
+        board.push(move)
+        return get_board_status()
+    
+def check_valid_move(move:str):
+    try:
+        new_move = chess.Move.from_uci(move)
+        if new_move in board.legal_moves:
+            return True
+        return False
+    except:
+        return False
 
 @app.post("/reset")
 def reset_board():
@@ -45,7 +60,7 @@ def reset_board():
 @app.post("/undo")
 def undo_move():
     board.pop()
-    return board.fen()
+    return get_board_status()
 
 # convert the coordinates to a square
 def convert_to_square(x:int, y:int):
@@ -68,13 +83,17 @@ def update_board(uci_move:str):
     board.push_uci(uci_move)
 # Return a list of pieces on the board containing the position of each piece and each type
 def get_pieces():
+    piece_types = {
+        'p': 'pawn', 'r': 'rook', 'n': 'knight', 'b': 'bishop', 'q': 'queen', 'k': 'king',
+        'P': 'pawn', 'R': 'rook', 'N': 'knight', 'B': 'bishop', 'Q': 'queen', 'K': 'king'
+    }
     return [
         {
-            "square": chess.square_name(square),
-            "rank": chess.square_rank(square),
-            "file": chess.square_file(square),
-            "type": piece.symbol(),
-            "colour" : piece.color
+            "id": chess.square_name(square),
+            "x": chess.square_file(square),
+            "y": 7 - chess.square_rank(square),
+            "type": piece_types[piece.symbol()],
+            "player": "white" if piece.color == chess.WHITE else "black"
         }
         for square, piece in board.piece_map().items()
     ]

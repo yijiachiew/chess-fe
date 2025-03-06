@@ -20,36 +20,29 @@ const RenderChessBoard = () => {
  //
         //{id:"rookw1",x:3,y:0,type:'rook',player:'white'},
         //{id:"rookw2",x:1,y:5,type:'rook',player:'white'},
-        ...Array.from({length: 8}, (_,i) => ({id:`pawnw${i}`,x:i,y:6,type:'pawn' as PieceType,player:'white' as Player})),
-        {id:"rookw1",x:0,y:7,type:'rook',player:'white'},
-        {id:"rookw2",x:7,y:7,type:'rook',player:'white'},
-        {id:"kingw",x:4,y:7,type:'king',player:'white'},
-        {id:"kingb",x:4,y:0,type:'king',player:'black',haveMoved:false},
-        {id:"rookb1",x:0,y:0,type:'rook',player:'black',haveMoved:false},
-        {id:"rookb2",x:7,y:0,type:'rook',player:'black',haveMoved:false},
     ]
     const initialPieces:ChessPiece[] = [
         //White pieces
-        ...Array.from({length: 8}, (_,i) => ({id:`pawnw${i}`,x:i,y:6,type:'pawn' as PieceType,player:'white' as Player})),
-        {id:"rookw1",x:0,y:7,type:'rook',player:'white'},
-        {id:"rookw2",x:7,y:7,type:'rook',player:'white'},
-        {id:"knightw1",x:1,y:7,type:'knight',player:'white'},
-        {id:"knightw2",x:6,y:7,type:'knight',player:'white'},
-        {id:"bishopw1",x:2,y:7,type:'bishop',player:'white'},
-        {id:"bishopw2",x:5,y:7,type:'bishop',player:'white'},
-        {id:"queenw",x:3,y:7,type:'queen',player:'white'},
-        {id:"kingw",x:4,y:7,type:'king',player:'white'},
-        //Black pieces
-        ...Array.from({length: 8}, (_,i) => ({id:`pawnb${i}`,x:i,y:1,type:'pawn' as PieceType,player:'black' as Player})),
-        {id:"rookb1",x:0,y:0,type:'rook',player:'black'},
-        {id:"rookb2",x:7,y:0,type:'rook',player:'black'},
-        {id:"knightb1",x:1,y:0,type:'knight',player:'black'},
-        {id:"knightb2",x:6,y:0,type:'knight',player:'black'},
-        {id:"bishopb1",x:2,y:0,type:'bishop',player:'black'},
-        {id:"bishopb2",x:5,y:0,type:'bishop',player:'black'},
-        {id:"queenb",x:3,y:0,type:'queen',player:'black'},
-        {id:"kingb",x:4,y:0,type:'king',player:'black'},
-    ]
+        ...Array.from({length: 8}, (_,i) => ({id:`${String.fromCharCode(97+i)}2`,x:i,y:6,type:'pawn' as PieceType,player:'white' as Player})),
+                    {id:"a1",x:0,y:7,type:'rook',player:'white'},
+                    {id:"h1",x:7,y:7,type:'rook',player:'white'},
+                    {id:"b1",x:1,y:7,type:'knight',player:'white'},
+                    {id:"g2",x:6,y:7,type:'knight',player:'white'},
+                    {id:"c1",x:2,y:7,type:'bishop',player:'white'},
+                    {id:"f1",x:5,y:7,type:'bishop',player:'white'},
+                    {id:"d1",x:3,y:7,type:'queen',player:'white'},
+                    {id:"e1",x:4,y:7,type:'king',player:'white'},
+                    //Black pieces
+                    ...Array.from({length: 8}, (_,i) => ({id:`${String.fromCharCode(97+i)}7`,x:i,y:1,type:'pawn' as PieceType,player:'black' as Player})),
+                    {id:"a8",x:0,y:0,type:'rook',player:'black'},
+                    {id:"h8",x:7,y:0,type:'rook',player:'black'},
+                    {id:"b8",x:1,y:0,type:'knight',player:'black'},
+                    {id:"g8",x:6,y:0,type:'knight',player:'black'},
+                    {id:"c8",x:2,y:0,type:'bishop',player:'black'},
+                    {id:"f8",x:5,y:0,type:'bishop',player:'black'},
+                    {id:"d8",x:3,y:0,type:'queen',player:'black'},
+                    {id:"e8",x:4,y:0,type:'king',player:'black'},
+                ]
     //TODO: Create the initial state for the chess pieces
     const [pieces,setPieces] = useState<ChessPiece[]>([...initialPieces])
     const [availableMoves,setAvailableMoves] = useState<{x:number,y:number}[]>([]);
@@ -60,7 +53,13 @@ const RenderChessBoard = () => {
     //Previous player turn
     const [previousPlayerTurn,setPreviousPlayerTurn] = useState<Player>('black');
 
-
+    // Convert the index position of the square to the chess notation in UCI
+    function indexToSquare(xIndex:number,yIndex:number):string {
+        const file = String.fromCharCode(97 + xIndex);
+        const rank = (8 - yIndex).toString();
+        console.log(file + rank);
+        return file + rank;
+    }
     // Handles the drag event when a piece is picked up
     //TODO: Implement possible moves shown on the board
     const handleDragStart = (e:React.DragEvent,id:string) => {
@@ -101,13 +100,14 @@ const RenderChessBoard = () => {
         // Save the previous state of the board
         setPreviousState([...pieces]);
         const targetPiece = pieces.find((p) => p.x === x && p.y === y);
+        const newId = indexToSquare(x,y);
         // Updates the piece's position
         setPieces((pieces) =>
             pieces
             .filter((p) => p.id !== targetPiece?.id)
             .map((p) => {
             if (p.id === pieceId) {
-                return { ...p, x, y };
+                return { ...p, x, y ,id:newId};
             }
             return p;
             })
@@ -120,9 +120,10 @@ const RenderChessBoard = () => {
             if (rook) {
                 //Move the rook
                 const newRookX = x === 2 ? 3 : 5;
+                const newId = indexToSquare(newRookX,rook.y);
                 setPieces((pieces) => pieces.map((p) => {
                     if (p.id === rook.id) {
-                        return {...p, x: newRookX};
+                        return {...p, x: newRookX,id:newId};
                     }
                     return p;
                 }));
@@ -261,7 +262,7 @@ const RenderChessBoard = () => {
                                     backgroundColor: isBlack ? "black" : "white",
                                 }}
                                 /**Handles the drop event here */
-                                onDrop={(e) => handleDropAi(e, j, i)
+                                onDrop={(e) => handleDrop(e, j, i)
                                 }
                                 onDragOver={handleDragOver}
                             >
