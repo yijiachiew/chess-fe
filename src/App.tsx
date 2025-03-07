@@ -6,7 +6,7 @@ function App() {
   
   return (
     <div>
-      <h1>Chess</h1>
+      <h1>Chess-Fe</h1>
       <RenderChessBoardNew/>
     </div>
   )

@@ -43,6 +43,11 @@ const RenderChessBoardNew = () => {
         const [availableMoves,setAvailableMoves] = useState<{x:number,y:number}[]>([]);
         //Player turn
         const [playerTurn,setPlayerTurn] = useState<Player>('white');
+        const [isCheckmate,setIsCheckmate] = useState<boolean>(false);
+        const [isStalemate,setIsStalemate] = useState<boolean>(false);
+        const [isCheck,setIsCheck] = useState<boolean>(false);
+        const [isGameOver,setIsGameOver] = useState<boolean>(false);
+        //Handles the drag event
         const handleDragStart = (e:React.DragEvent,id:string) => {
                 console.log(id)
                 
@@ -165,6 +170,10 @@ const RenderChessBoardNew = () => {
         
         setPieces(newPieces);
         setPlayerTurn(newState.playerTurn);
+        setIsCheckmate(newState.isCheckmate);
+        setIsStalemate(newState.isStalemate);
+        setIsCheck(newState.isCheck);
+        setIsGameOver(newState.isCheckmate || newState.isStalemate);
         console.log(newState.playerTurn);
     }
     // Convert the index position of the square to the chess notation in UCI
@@ -214,13 +223,17 @@ const RenderChessBoardNew = () => {
     return (
     <div>
         <div className="turn">
-            <h2
-            style={
-                {
-                    color: playerTurn === "white" ? "#89CFF0" : "#FFCCCB",
-                }
-            }>{playerTurn === "white" ? "Blue's Turn": "Red's Turn"}
-            </h2>
+        <h2>
+            {isCheckmate ? `${playerTurn === "white" ? "Red" : "Blue"} wins by Checkmate!` : isStalemate ? "Stalemate!" : isCheck ? "Check!" : isGameOver ? "Game Over!" : ""}
+        </h2>
+        <h2>
+            {isGameOver ? "Game Over!" : (
+                <span style={{ color: playerTurn === "white" ? "#89CFF0" : "#FFCCCB" }}>
+                    {playerTurn === "white" ? "Blue's Turn" : "Red's Turn"}
+                </span>
+            )}
+        </h2>
+            
         </div>
         <div 
                         className="chessboard">
