@@ -3,6 +3,7 @@ import chess
 import chess.engine
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
+from typing import Optional
 
 # TO RUN THE PROGRAM : py -m uvicorn chessAi:app --reload
 app = FastAPI()
@@ -19,7 +20,7 @@ board = chess.Board() # create a game state instance
 
 class MoveRequest(BaseModel):
     move_uci: str  # UCI format move string
-    promotion = str | None = None  # Optional promotion piece
+    promotion: Optional[str] = None  # Optional promotion piece
 
 # return a state of the board
 @app.get("/board")
@@ -45,12 +46,15 @@ def make_move(moveR:MoveRequest) -> dict:
     if not check_valid_move(moveR.move_uci):
         return {"error": "Invalid move"}
     else:
+        print(f"Move received: {moveR.move_uci}, Promotion: {moveR.promotion}")
         move = chess.Move.from_uci(moveR.move_uci)
         # check if the move is a promotion move
 
         if is_promotion_move(move, board) and moveR.promotion is None:
+            print("Promotion move detected without promotion piece specified.")
             return get_board_status(promotion_needed=True)
-
+        
+        
         if is_promotion_move(move, board):
             promotion_piece = {
                 'q': chess.QUEEN,
@@ -65,10 +69,16 @@ def make_move(moveR:MoveRequest) -> dict:
 def check_valid_move(move:str):
     try:
         new_move = chess.Move.from_uci(move)
+        # Check for promotion move
+        if is_promotion_move(new_move, board) and new_move.promotion is None:
+            print("Promotion move detected without promotion piece specified.")
+            return True
+        # Check if the move is legal
         if new_move in board.legal_moves:
             return True
         return False
     except:
+        #print(f"Invalid move format: {move}")
         return False
 
 @app.post("/reset")
@@ -95,6 +105,7 @@ def get_piece_at_square(x:str, y:str):
 
 def is_promotion_move(move: chess.Move, board: chess.Board) -> bool:
     """Check if a move leads to a promotion of a pawn."""
+    print(f"Checking promotion for move: {move}")
     piece = board.piece_at(move.from_square)
     return piece and piece.piece_type == chess.PAWN and chess.square_rank(move.to_square) in (0, 7)
 

@@ -97,14 +97,17 @@ const RenderChessBoardNew = () => {
     //Post the move to the backend
     async function postStates(move:string,promotion?:string){
         try {
-            const res = await axios.post(`${API_URL}/move/`,{
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({move_uci:move,promotion})
+            console.log("Posting move: " + JSON.stringify({move_uci:move,promotion:null}));
+            const payload = {
+                move_uci: move,
+                promotion: promotion || null
+            }
+            const res = await axios.post(`${API_URL}/move/`, payload);
                 
-        });
-
+        
+        // Check if the response indicates a promotion is needed
         if (res.data.promotionNeeded){
+            console.log("Promotion needed");
             const pieceChoice = await handlePromotion();
             postStates(move,pieceChoice);
             return;
@@ -114,7 +117,7 @@ const RenderChessBoardNew = () => {
         updateGameState(newState);
 
         } catch (err) {
-        console.log("Error");
+        console.log("Error at postStates");
         }
     }
     //Fetches the current state of the board from the backend
@@ -145,6 +148,7 @@ const RenderChessBoardNew = () => {
             console.log("Error");
         }
     }
+    // Reset the board to the initial state
     async function resetBoard() {
         try {
             const res = await axios.post(`${API_URL}/reset`);
@@ -154,6 +158,7 @@ const RenderChessBoardNew = () => {
             console.log("Error");
         }
     }
+    // Undo the last move
     async function undoMove() {
         try {
             const res = await axios.post(`${API_URL}/undo`,{
@@ -213,7 +218,6 @@ const RenderChessBoardNew = () => {
             //Log the current state of the board
             //fetchStates();
             setAvailableMoves([]);
-            setPromotionNeeded(false);
         }
     // Handle promotion prompt 
     const handlePromotion = async (): Promise<string> => {
