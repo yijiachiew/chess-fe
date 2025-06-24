@@ -39,9 +39,11 @@ const RenderChessBoardNew = () => {
             {id:"d8",x:3,y:0,type:'queen',player:'black'},
             {id:"e8",x:4,y:0,type:'king',player:'black'},
         ]
+        //Toggle gamemode of the chessboard
+        const [gameMode,setGameMode] = useState<"pvp"|"ai">("pvp");
+
         const [pieces,setPieces] = useState<ChessPiece[]>([...initialPieces])
         const [availableMoves,setAvailableMoves] = useState<{x:number,y:number}[]>([]);
-        const [promotionNeeded,setPromotionNeeded] = useState<boolean>(false);
         //Player turn
         const [playerTurn,setPlayerTurn] = useState<Player>('white');
         const [isCheckmate,setIsCheckmate] = useState<boolean>(false);
@@ -174,6 +176,30 @@ const RenderChessBoardNew = () => {
             console.log("Error");
         }
     }
+    async function setPvp(){
+        try {
+            const res = await axios.post(`${API_URL}/set_game_mode/pvp`,{
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+            });
+            console.log("Set to PvP");
+        }
+        catch (err) {
+            console.log("Error setting to PvP");
+        }
+    }
+    async function setAi(){
+        try {
+            const res = await axios.post(`${API_URL}/set_game_mode/ai`,{
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+            });
+            console.log("Set to AI");
+        }
+        catch (err) {
+            console.log("Error setting to AI");
+        }
+    }
     function updateGameState(newState:GameState) {
         console.log(newState);
         // Convert from the python dict to a list of ChessPieces
@@ -238,6 +264,14 @@ const RenderChessBoardNew = () => {
     const handleUndo = () => {
         console.log("Undo");
         undoMove();
+    }
+    const setToPvp = () => {
+        setPvp();
+        resetBoard();
+    }
+    const setToAi = () => {
+        setAi();
+        resetBoard();
     }
     return (
     <div>
@@ -309,6 +343,11 @@ const RenderChessBoardNew = () => {
                     </div>
         <Button text="Reset" onClick={handleReset}/>
         <Button text="Undo" onClick={handleUndo}/>
+        <div className="gamemode">
+            <Button text="PvP" onClick={setToPvp}/>
+            <Button text="AI" onClick={setToAi}/>
+            /</div>
+        
     </div>
     )
 }

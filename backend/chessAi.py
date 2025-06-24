@@ -3,10 +3,35 @@ import chess
 import chess.engine
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
+from contextlib import asynccontextmanager
+from enum import Enum
 from typing import Optional
 
+stockfish_path = "/stockfish/stockfish-windows-x86-64-avx2"  # path to the stockfish engine executable
+engine = chess.engine.SimpleEngine.popen_uci(stockfish_path) # path to the stockfish engine
+
+# Enum to represent game modes
+class GameMode(Enum):
+    VS_HUMAN = "pvp"
+    VS_AI = "ai"
+
+class MoveRequest(BaseModel):
+    move_uci: str  # UCI format move string
+    promotion: Optional[str] = None  # Optional promotion piece
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    global board, engine, game_mode
+    print("Starting the chess application...")
+    board = chess.Board() # create a game state instance
+    engine = chess.engine.SimpleEngine.popen_uci(stockfish_path)
+    game_mode = GameMode.VS_HUMAN  # default game mode
+    yield
+    print("Shutting down the chess application...")
+    engine.quit()
+
 # TO RUN THE PROGRAM : py -m uvicorn chessAi:app --reload
-app = FastAPI()
+app = FastAPI(lifespan=lifespan)
 # configure the CORS middleware to allow all origins
 app.add_middleware(
     CORSMiddleware,
@@ -15,13 +40,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-board = chess.Board() # create a game state instance
-
-class MoveRequest(BaseModel):
-    move_uci: str  # UCI format move string
-    promotion: Optional[str] = None  # Optional promotion piece
-
 # return a state of the board
 @app.get("/board")
 def get_board() -> dict:
@@ -64,8 +82,18 @@ def make_move(moveR:MoveRequest) -> dict:
             }.get(moveR.promotion.lower(), chess.QUEEN)
             move = chess.Move(move.from_square, move.to_square, promotion=promotion_piece)
         board.push(move)
+
+        # If the game mode is AI, make the AI move immediately after the player's move
+        if game_mode == GameMode.VS_AI and not board.is_game_over():
+            ai_move = get_ai_move(board, 3.0)  # AI thinks for 3 seconds
+            board.push_uci(ai_move)
+            print(f"AI move made: {ai_move}")
+
         return get_board_status()
     
+def make_ai_move():
+    pass
+
 def check_valid_move(move:str):
     try:
         new_move = chess.Move.from_uci(move)
@@ -90,6 +118,15 @@ def reset_board():
 def undo_move():
     board.pop()
     return get_board_status()
+@app.post("/set_game_mode/{mode}")
+def set_game_mode(mode: str):
+    global game_mode
+    if mode in GameMode.__members__:
+        game_mode = GameMode[mode]
+        return {"message": f"Game mode set to {game_mode.value}"}
+    else:
+        return {"error": "Invalid game mode"}
+    
 
 # convert the coordinates to a square
 def convert_to_square(x:int, y:int):
@@ -132,3 +169,10 @@ def get_pieces():
         }
         for square, piece in board.piece_map().items()
     ]
+
+def get_ai_move(board:chess.Board, time_limit:float=1.0) -> str:
+    """
+    Get the best move for the AI using Stockfish engine.
+    """
+    result = engine.play(board, chess.engine.Limit(time=time_limit))
+    return result.move.uci()
