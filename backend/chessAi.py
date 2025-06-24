@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 import chess
 import chess.engine
+from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
 
 # TO RUN THE PROGRAM : py -m uvicorn chessAi:app --reload
@@ -13,16 +14,20 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-board = chess.Board()
 
 board = chess.Board() # create a game state instance
+
+class MoveRequest(BaseModel):
+    move_uci: str  # UCI format move string
+    promotion = str | None = None  # Optional promotion piece
+
 # return a state of the board
 @app.get("/board")
 def get_board() -> dict:
     get_board_status()
 
 
-def get_board_status() -> dict:
+def get_board_status(promotion_needed:bool=False) -> dict:
     return {
         "board": board.fen(),
         "playerTurn": "white" if board.turn == chess.WHITE else "black",
@@ -31,15 +36,29 @@ def get_board_status() -> dict:
         "isCheck": board.is_check(),
         "isGameOver": board.is_game_over(),
         "result": board.result() if board.is_game_over() else None,
-        "pieces": get_pieces()
+        "pieces": get_pieces(),
+        "promotionNeeded": promotion_needed
     }
-@app.post("/move/{move}") 
-def make_move(move: str):
+@app.post("/move/") 
+def make_move(moveR:MoveRequest) -> dict:
     # check if not a legal move
-    if not check_valid_move(move):
+    if not check_valid_move(moveR.move_uci):
         return {"error": "Invalid move"}
     else:
-        move = chess.Move.from_uci(move)
+        move = chess.Move.from_uci(moveR.move_uci)
+        # check if the move is a promotion move
+
+        if is_promotion_move(move, board) and moveR.promotion is None:
+            return get_board_status(promotion_needed=True)
+
+        if is_promotion_move(move, board):
+            promotion_piece = {
+                'q': chess.QUEEN,
+                'r': chess.ROOK,
+                'b': chess.BISHOP,
+                'n': chess.KNIGHT
+            }.get(moveR.promotion.lower(), chess.QUEEN)
+            move = chess.Move(move.from_square, move.to_square, promotion=promotion_piece)
         board.push(move)
         return get_board_status()
     
@@ -73,6 +92,11 @@ def convert_to_coordinates(square):
 @app.get("/piece_at_square/{x}/{y}")
 def get_piece_at_square(x:str, y:str):
     return board.piece_at(convert_to_square(int(x), int(y)))
+
+def is_promotion_move(move: chess.Move, board: chess.Board) -> bool:
+    """Check if a move leads to a promotion of a pawn."""
+    piece = board.piece_at(move.from_square)
+    return piece and piece.piece_type == chess.PAWN and chess.square_rank(move.to_square) in (0, 7)
 
 # get a list of moves in coordinates based to on a square
 @app.get("/legal_moves/{square}")

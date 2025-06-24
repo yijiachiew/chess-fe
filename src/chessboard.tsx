@@ -41,6 +41,7 @@ const RenderChessBoardNew = () => {
         ]
         const [pieces,setPieces] = useState<ChessPiece[]>([...initialPieces])
         const [availableMoves,setAvailableMoves] = useState<{x:number,y:number}[]>([]);
+        const [promotionNeeded,setPromotionNeeded] = useState<boolean>(false);
         //Player turn
         const [playerTurn,setPlayerTurn] = useState<Player>('white');
         const [isCheckmate,setIsCheckmate] = useState<boolean>(false);
@@ -94,13 +95,21 @@ const RenderChessBoardNew = () => {
         }
     }
     //Post the move to the backend
-    async function postStates(move:string){
+    async function postStates(move:string,promotion?:string){
         try {
-            const res = await axios.post(`${API_URL}/move/${move}`,{
+            const res = await axios.post(`${API_URL}/move/`,{
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({move_uci:move,promotion})
                 
         });
+
+        if (res.data.promotionNeeded){
+            const pieceChoice = await handlePromotion();
+            postStates(move,pieceChoice);
+            return;
+        }
+
         const newState:GameState = res.data;
         updateGameState(newState);
 
@@ -204,7 +213,13 @@ const RenderChessBoardNew = () => {
             //Log the current state of the board
             //fetchStates();
             setAvailableMoves([]);
+            setPromotionNeeded(false);
         }
+    // Handle promotion prompt 
+    const handlePromotion = async (): Promise<string> => {
+        const piece = window.prompt("Promote your pawn to (q for queen, r for rook, b for bishop, n for knight):", "q");
+        return piece ? piece.toLowerCase() : "q"; // Default to queen if no input
+    }
     // Pieces cannot be dragged over the board
     const handleDragOver = (e:React.DragEvent) => {
         e.preventDefault();
