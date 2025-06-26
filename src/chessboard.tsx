@@ -176,28 +176,13 @@ const RenderChessBoardNew = () => {
             console.log("Error");
         }
     }
-    async function setPvp(){
+    async function setMode(mode:"pvp"|"ai") {
+        setGameMode(mode);
         try {
-            const res = await axios.post(`${API_URL}/set_game_mode/pvp`,{
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-            });
-            console.log("Set to PvP");
-        }
-        catch (err) {
-            console.log("Error setting to PvP");
-        }
-    }
-    async function setAi(){
-        try {
-            const res = await axios.post(`${API_URL}/set_game_mode/ai`,{
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-            });
-            console.log("Set to AI");
-        }
-        catch (err) {
-            console.log("Error setting to AI");
+            const res = await axios.post(`${API_URL}/set_game_mode`, { mode: mode });
+            console.log("Game mode set to: " + mode);
+        } catch (err) {
+            console.log("Error setting game mode");
         }
     }
     function updateGameState(newState:GameState) {
@@ -266,11 +251,11 @@ const RenderChessBoardNew = () => {
         undoMove();
     }
     const setToPvp = () => {
-        setPvp();
+        setMode("pvp");
         resetBoard();
     }
     const setToAi = () => {
-        setAi();
+        setMode("ai");
         resetBoard();
     }
     return (

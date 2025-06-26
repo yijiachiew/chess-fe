@@ -6,9 +6,17 @@ from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from enum import Enum
 from typing import Optional
+from stockfish import Stockfish
+import os
+current_dir = os.path.dirname(__file__)
+stockfish_path = os.path.join(current_dir, 'stockfish', 'stockfish-windows-x86-64-avx2.exe')
+#engine_path = os.path.join(current_dir, 'stockfish', 'stockfish-windows-x86-64-avx2.exe')
 
-stockfish_path = "/stockfish/stockfish-windows-x86-64-avx2"  # path to the stockfish engine executable
-engine = chess.engine.SimpleEngine.popen_uci(stockfish_path) # path to the stockfish engine
+# ========== GLOBAL STATE ==========
+board: chess.Board
+stockfish: Stockfish
+#engine: chess.engine.SimpleEngine
+game_mode: str  
 
 # Enum to represent game modes
 class GameMode(Enum):
@@ -19,17 +27,20 @@ class MoveRequest(BaseModel):
     move_uci: str  # UCI format move string
     promotion: Optional[str] = None  # Optional promotion piece
 
+class GameModeRequest(BaseModel):
+    mode: GameMode
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    global board, engine, game_mode
+    global board,stockfish, game_mode
     print("Starting the chess application...")
     board = chess.Board() # create a game state instance
-    engine = chess.engine.SimpleEngine.popen_uci(stockfish_path)
+    
+    stockfish = Stockfish(stockfish_path)  # initialize the stockfish engine
     game_mode = GameMode.VS_HUMAN  # default game mode
     yield
     print("Shutting down the chess application...")
-    engine.quit()
-
+    
 # TO RUN THE PROGRAM : py -m uvicorn chessAi:app --reload
 app = FastAPI(lifespan=lifespan)
 # configure the CORS middleware to allow all origins
@@ -85,14 +96,16 @@ def make_move(moveR:MoveRequest) -> dict:
 
         # If the game mode is AI, make the AI move immediately after the player's move
         if game_mode == GameMode.VS_AI and not board.is_game_over():
-            ai_move = get_ai_move(board, 3.0)  # AI thinks for 3 seconds
-            board.push_uci(ai_move)
-            print(f"AI move made: {ai_move}")
+            ai_move = get_ai_move(board, 2.0)  # AI thinks for 3 seconds
+            if ai_move:
+                print(f"AI move: {ai_move}")
+                board.push(ai_move)
+            else:
+                print("AI could not find a valid move.")
 
         return get_board_status()
     
-def make_ai_move():
-    pass
+
 
 def check_valid_move(move:str):
     try:
@@ -118,11 +131,11 @@ def reset_board():
 def undo_move():
     board.pop()
     return get_board_status()
-@app.post("/set_game_mode/{mode}")
-def set_game_mode(mode: str):
+@app.post("/set_game_mode")
+def set_game_mode(mode: GameModeRequest):
     global game_mode
-    if mode in GameMode.__members__:
-        game_mode = GameMode[mode]
+    if mode.mode in GameMode:
+        game_mode = mode.mode
         return {"message": f"Game mode set to {game_mode.value}"}
     else:
         return {"error": "Invalid game mode"}
@@ -170,9 +183,13 @@ def get_pieces():
         for square, piece in board.piece_map().items()
     ]
 
-def get_ai_move(board:chess.Board, time_limit:float=1.0) -> str:
+def get_ai_move(board:chess.Board, time_limit:float=1.0) -> Optional[chess.Move]:
     """
     Get the best move for the AI using Stockfish engine.
     """
-    result = engine.play(board, chess.engine.Limit(time=time_limit))
-    return result.move.uci()
+    if board.is_game_over():
+        return
+    stockfish.set_fen_position(board.fen())
+    result = stockfish.get_best_move_time(time_limit * 1000)  # Stockfish expects time in milliseconds
+    print(f"AI move result: {result}")
+    return chess.Move.from_uci(result) if result else None
