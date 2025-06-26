@@ -1,6 +1,5 @@
 from fastapi import FastAPI
 import chess
-import chess.engine
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
@@ -10,8 +9,6 @@ from stockfish import Stockfish
 import os
 current_dir = os.path.dirname(__file__)
 stockfish_path = os.path.join(current_dir, 'stockfish', 'stockfish-windows-x86-64-avx2.exe')
-#engine_path = os.path.join(current_dir, 'stockfish', 'stockfish-windows-x86-64-avx2.exe')
-
 # ========== GLOBAL STATE ==========
 board: chess.Board
 stockfish: Stockfish
@@ -71,6 +68,10 @@ def get_board_status(promotion_needed:bool=False) -> dict:
     }
 @app.post("/move/") 
 def make_move(moveR:MoveRequest) -> dict:
+    """
+    Make a move on the chess board based on the UCI format move string.
+    If the move is a promotion move, it checks if a promotion piece is specified.
+    """
     # check if not a legal move
     if not check_valid_move(moveR.move_uci):
         return {"error": "Invalid move"}
@@ -94,20 +95,16 @@ def make_move(moveR:MoveRequest) -> dict:
             move = chess.Move(move.from_square, move.to_square, promotion=promotion_piece)
         board.push(move)
 
-        # If the game mode is AI, make the AI move immediately after the player's move
-        if game_mode == GameMode.VS_AI and not board.is_game_over():
-            ai_move = get_ai_move(board, 2.0)  # AI thinks for 3 seconds
-            if ai_move:
-                print(f"AI move: {ai_move}")
-                board.push(ai_move)
-            else:
-                print("AI could not find a valid move.")
+        
 
         return get_board_status()
     
 
 
 def check_valid_move(move:str):
+    """
+    Checks validity of a move in UCI format.
+    """
     try:
         new_move = chess.Move.from_uci(move)
         # Check for promotion move
@@ -139,7 +136,21 @@ def set_game_mode(mode: GameModeRequest):
         return {"message": f"Game mode set to {game_mode.value}"}
     else:
         return {"error": "Invalid game mode"}
-    
+@app.post("/ai_move")
+def ai_move():
+    """
+    Make an AI move if the game mode is set to AI and the game is not over.
+    Seperate request to handle AI moves after the player's move.
+    """
+    # If the game mode is AI, make the AI move immediately after the player's move
+    if game_mode == GameMode.VS_AI and not board.is_game_over():
+        ai_move = get_ai_move(board, 2.0)  # AI thinks for 2 seconds
+        if ai_move:
+            print(f"AI move: {ai_move}")
+            board.push(ai_move)
+        else:
+            print("AI could not find a valid move.")
+    return get_board_status()
 
 # convert the coordinates to a square
 def convert_to_square(x:int, y:int):
@@ -164,8 +175,7 @@ def is_promotion_move(move: chess.Move, board: chess.Board) -> bool:
 def get_legal_moves(square:str) -> list[tuple]:
     return [convert_to_coordinates(move.to_square) for move in board.legal_moves if move.from_square == chess.parse_square(square)]
 
-def update_board(uci_move:str):
-    board.push_uci(uci_move)
+
 # Return a list of pieces on the board containing the position of each piece and each type
 def get_pieces():
     piece_types = {

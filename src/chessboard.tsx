@@ -23,7 +23,7 @@ const RenderChessBoardNew = () => {
             {id:"a1",x:0,y:7,type:'rook',player:'white'},
             {id:"h1",x:7,y:7,type:'rook',player:'white'},
             {id:"b1",x:1,y:7,type:'knight',player:'white'},
-            {id:"g2",x:6,y:7,type:'knight',player:'white'},
+            {id:"g1",x:6,y:7,type:'knight',player:'white'},
             {id:"c1",x:2,y:7,type:'bishop',player:'white'},
             {id:"f1",x:5,y:7,type:'bishop',player:'white'},
             {id:"d1",x:3,y:7,type:'queen',player:'white'},
@@ -97,7 +97,7 @@ const RenderChessBoardNew = () => {
         }
     }
     //Post the move to the backend
-    async function postStates(move:string,promotion?:string){
+    async function postStates(move:string,promotion?:string) : Promise<boolean> {
         try {
             console.log("Posting move: " + JSON.stringify({move_uci:move,promotion:null}));
             const payload = {
@@ -112,14 +112,15 @@ const RenderChessBoardNew = () => {
             console.log("Promotion needed");
             const pieceChoice = await handlePromotion();
             postStates(move,pieceChoice);
-            return;
+            return true;
         }
 
         const newState:GameState = res.data;
         updateGameState(newState);
-
+        return true;
         } catch (err) {
         console.log("Error at postStates");
+        return false;
         }
     }
     //Fetches the current state of the board from the backend
@@ -185,6 +186,19 @@ const RenderChessBoardNew = () => {
             console.log("Error setting game mode");
         }
     }
+    // Make a post request to apply a move from AI
+    async function applyAiMove(){
+        try {
+            const res = await axios.post(`${API_URL}/ai_move`);
+            //Update the game state with the response
+            const newState:GameState = res.data;
+            updateGameState(newState);
+            
+        } catch (err) {
+            console.log("Error applying AI move");
+        }
+
+    }
     function updateGameState(newState:GameState) {
         console.log(newState);
         // Convert from the python dict to a list of ChessPieces
@@ -201,6 +215,8 @@ const RenderChessBoardNew = () => {
         setIsGameOver(newState.isCheckmate || newState.isStalemate);
         console.log(newState.playerTurn);
     }
+
+    
     // Convert the index position of the square to the chess notation in UCI
     function indexToSquare(xIndex:number,yIndex:number):string {
         const file = String.fromCharCode(97 + xIndex);
@@ -225,11 +241,15 @@ const RenderChessBoardNew = () => {
             const sourceSquare = indexToSquare(piece.x,piece.y);
             const targetSquare = indexToSquare(x,y);
             //Send the move to the backend
-            postStates(`${sourceSquare}${targetSquare}`);
-            //Log the current state of the board
-            //fetchStates();
-            setAvailableMoves([]);
+            postStates(`${sourceSquare}${targetSquare}`).then((result) => {
+                setAvailableMoves([]);
+                // If game mode is AI, fetch a post request to apply AI move
+                if (gameMode === "ai" && result) {
+                    applyAiMove();
+                }
+            });
         }
+    
     // Handle promotion prompt 
     const handlePromotion = async (): Promise<string> => {
         const piece = window.prompt("Promote your pawn to (q for queen, r for rook, b for bishop, n for knight):", "q");
